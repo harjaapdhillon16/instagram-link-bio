@@ -1,12 +1,13 @@
+/* eslint-disable jsx-a11y/alt-text */
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
+import axios from 'axios';
 import Head from 'next/head';
-import * as React from 'react';
+import { useSearchParams } from 'next/navigation';
+import React, { useCallback, useEffect, useState } from 'react';
 
-import ArrowLink from '@/components/links/ArrowLink';
-import ButtonLink from '@/components/links/ButtonLink';
-import UnderlineLink from '@/components/links/UnderlineLink';
-import UnstyledLink from '@/components/links/UnstyledLink';
+import { generateRandomId } from '@/lib/random-id';
 
 /**
  * SVGR Support
@@ -15,55 +16,76 @@ import UnstyledLink from '@/components/links/UnstyledLink';
  * You can override the next-env if the type is important to you
  * @see https://stackoverflow.com/questions/68103844/how-to-override-next-js-svg-module-declaration
  */
-import Logo from '~/svg/Logo.svg';
 
 // !STARTERCONF -> Select !STARTERCONF and CMD + SHIFT + F
 // Before you begin editing, follow all comments with `STARTERCONF`,
 // to customize the default configuration.
 
+const redirectUri = 'https://instaconnects.vercel.app/';
+
+const InstagramAuth = () => {
+  const handleLogin = () => {
+    const clientId = '1393597341247005';
+    window.location.href = `https://api.instagram.com/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=user_profile&response_type=code`;
+  };
+
+  return (
+    <>
+      <button
+        className='mx-auto flex w-[210px] items-center space-x-2 rounded-lg bg-[#050708] px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-[#050708] focus:outline-none'
+        onClick={handleLogin}
+      >
+        <span>Login with Instagram</span>
+        <img
+          className='h-4 w-4 rounded object-cover'
+          src='https://img.freepik.com/premium-vector/modern-badge-logo-instagram-icon_578229-124.jpg?size=338&ext=jpg&ga=GA1.1.1546980028.1703116800&semt=ais'
+        />
+      </button>
+    </>
+  );
+};
+
 export default function HomePage() {
+  const searchParams = useSearchParams();
+  const [userData, setUserData] = useState<any>('');
+  const instaDataFetch = useCallback(async (code_fixes: string) => {
+    const {
+      data: { data }
+    } = await axios.post('/api/instafetch', {
+      code: code_fixes,
+      redirectUri: redirectUri,
+      randomId: localStorage.getItem('random-id')
+    });
+    setUserData(data.username);
+  }, []);
+
+  useEffect(() => {
+    if (!localStorage.getItem('random-id')) {
+      localStorage.setItem('random-id', generateRandomId());
+    }
+    (async () => {
+      const code = searchParams?.get('code');
+      if (code) {
+        await instaDataFetch(code);
+      }
+    })();
+  }, [searchParams, instaDataFetch]);
+
   return (
     <main>
       <Head>
-        <title>Hi</title>
+        <title>Instagram Connect</title>
       </Head>
-      <section className='bg-white'>
-        <div className='layout relative flex min-h-screen flex-col items-center justify-center py-12 text-center'>
-          <Logo className='w-16' />
-          <h1 className='mt-4'>Next.js + Tailwind CSS + TypeScript Starter</h1>
-          <p className='mt-2 text-sm text-gray-800'>
-            A starter for Next.js, Tailwind CSS, and TypeScript with Absolute
-            Import, Seo, Link component, pre-configured with Husky{' '}
-          </p>
-          <p className='mt-2 text-sm text-gray-700'>
-            <ArrowLink href='https://github.com/theodorusclarence/ts-nextjs-tailwind-starter'>
-              See the repository
-            </ArrowLink>
-          </p>
-
-          <ButtonLink className='mt-6' href='/components' variant='light'>
-            See all components
-          </ButtonLink>
-
-          <UnstyledLink
-            href='https://vercel.com/new/git/external?repository-url=https%3A%2F%2Fgithub.com%2Ftheodorusclarence%2Fts-nextjs-tailwind-starter'
-            className='mt-4'
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              width='92'
-              height='32'
-              src='https://vercel.com/button'
-              alt='Deploy with Vercel'
-            />
-          </UnstyledLink>
-
-          <footer className='absolute bottom-2 text-gray-700'>
-            © {new Date().getFullYear()} By{' '}
-            <UnderlineLink href='https://theodorusclarence.com?ref=tsnextstarter'>
-              Theodorus Clarence
-            </UnderlineLink>
-          </footer>
+      <section className='h-[100vh] bg-gradient-to-b from-blue-900 to-blue-600'>
+        <p className='py-10 text-center font-sans text-4xl font-semibold text-white'>
+          Instagram Profile Viewer
+        </p>
+        <div className='mx-auto w-[95%]'>
+          {userData ? (
+            <p className='text-white'>{userData}</p>
+          ) : (
+            <InstagramAuth />
+          )}
         </div>
       </section>
     </main>
