@@ -48,7 +48,7 @@ const InstagramAuth = () => {
 export default function HomePage() {
   const searchParams = useSearchParams();
   const [userData, setUserData] = useState<any>('');
-  const instaDataFetch = useCallback(async (code_fixes: string) => {
+  const instaDataInput = useCallback(async (code_fixes: string) => {
     const {
       data: { data }
     } = await axios.post('/api/instafetch', {
@@ -56,20 +56,39 @@ export default function HomePage() {
       redirectUri: redirectUri,
       randomId: localStorage.getItem('random-id')
     });
+    await axios.post('/api/supabase/insert', {
+      table: 'instagram-data',
+      body: { user_profile: data, user_id: localStorage.getItem('random-id') }
+    });
     setUserData(data.username);
+  }, []);
+
+  const instaDataFetch = useCallback(async () => {
+    const {
+      data: { data }
+    }: any = await axios.post('/api/supabase/select', {
+      match: { user_id: localStorage.getItem('random-id') },
+      table: 'instagram-data'
+    });
+    const { user_profile } = (data as any)?.[0] ?? null;
+    if (user_profile?.username) {
+      setUserData(user_profile?.username ?? null);
+    }
   }, []);
 
   useEffect(() => {
     if (!localStorage.getItem('random-id')) {
       localStorage.setItem('random-id', generateRandomId());
+    } else {
+      instaDataFetch();
     }
     (async () => {
       const code = searchParams?.get('code');
       if (code) {
-        await instaDataFetch(code);
+        await instaDataInput(code);
       }
     })();
-  }, [searchParams, instaDataFetch]);
+  }, [searchParams, instaDataInput, instaDataFetch]);
 
   return (
     <main>
